@@ -79,7 +79,8 @@ def main():
                         "timestamp": datetime.datetime.now().isoformat(),
                         "zone": zone,
                         "object": class_name,
-                        "confidence": round(conf, 2)
+                        "confidence": round(conf, 2),
+                        "source": "real"
                     }
                     log_event(event_dict)
                     print(f"Logged event: {event_dict}")
