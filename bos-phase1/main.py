@@ -1,3 +1,4 @@
+import argparse
 import cv2
 from ultralytics import YOLO
 import datetime
@@ -6,12 +7,23 @@ from zones import get_zone
 from event_logger import log_event
 
 def main():
-    # Load YOLOv8 model (will download yolov8n.pt if not present)
-    model = YOLO('yolov8n.pt')
+    parser = argparse.ArgumentParser(description="BoS Phase 1")
+    parser.add_argument('--cam', type=int, default=2, help="Camera number (1 for system built-in, 2 for external)")
+    parser.add_argument('--conf', type=float, default=0.6, help="Minimum confidence threshold (e.g., 0.6)")
+    parser.add_argument('--model', type=str, default='yolov8s.pt', help="YOLO model size (yolov8n.pt, yolov8s.pt, etc.)")
+    args = parser.parse_args()
+
+    # Load YOLOv8 model (will download if not present)
+    model = YOLO(args.model)
     
-    # Initialize webcam
-    cap = cv2.VideoCapture(0)
+    # OpenCV is 0-indexed, so we subtract 1 from the user's choice
+    cv_cam_index = args.cam - 1
+    cap = cv2.VideoCapture(cv_cam_index, cv2.CAP_DSHOW)
     
+    # Force standard resolution to avoid DSHOW glitches/artifacting
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         return
@@ -20,7 +32,7 @@ def main():
     # Key: (zone, object_class_name), Value: timestamp (float)
     last_event_time = {}
     COOLDOWN_SECONDS = 3.0
-    CONFIDENCE_THRESHOLD = 0.5
+    CONFIDENCE_THRESHOLD = args.conf
     
     print("Starting webcam feed. Press 'q' to quit.")
     
