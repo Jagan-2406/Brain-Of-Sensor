@@ -94,7 +94,7 @@ def main():
                 cv2.putText(frame, label, (x1, max(y1 - 10, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
         # Display the live feed
-        cv2.imshow("BoS Phase 1 - Live Feed", frame)
+        cv2.imshow("BoS - Live Feed", frame)
         
         # Exit condition
         if cv2.waitKey(1) & 0xFF == ord('q'):
