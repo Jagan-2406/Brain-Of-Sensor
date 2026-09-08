@@ -12,7 +12,7 @@ from database import SessionLocal, Event, extract
 
 def main():
     parser = argparse.ArgumentParser(description="BoS Phase 3 - Rules Engine")
-    parser.add_argument('--cam', type=int, default=2, help="Camera number (1 for system built-in, 2 for external)")
+    parser.add_argument('--cam', type=int, default=1, help="Camera number (1 for system built-in, 2 for external)")
     parser.add_argument('--conf', type=float, default=0.6, help="Minimum confidence threshold (e.g., 0.6)")
     parser.add_argument('--model', type=str, default='yolov8s.pt', help="YOLO model size (yolov8n.pt, yolov8s.pt, etc.)")
     args = parser.parse_args()

@@ -41,7 +41,7 @@ def main():
     print("[3/3] Starting Vision Feed (src/main.py)... Press 'q' in video window to stop.")
     try:
         main_proc = subprocess.run(
-            [python_exe, os.path.join(project_root, 'src', 'main.py')],
+            [python_exe, os.path.join(project_root, 'src', 'main.py'), '--cam', '1'],
             cwd=project_root
         )
     except KeyboardInterrupt:
