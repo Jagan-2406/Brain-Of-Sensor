@@ -529,7 +529,7 @@
                                 ${reasonTags || '<span class="reason-code-tag">#normal_activity</span>'}
                             </div>
                             <div class="baseline-compare">
-                                Live Count: ${event.id % 5 + 1} | Hist Avg: ${event.historical_avg || 0.0} / hr
+                                Live Count: ${event.live_count || 1} | Hist Avg: ${event.historical_avg || 0.0} / hr
                             </div>
                         </div>
                     </div>

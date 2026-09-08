@@ -1,0 +1,17 @@
+[ Webcam ] 
+    │
+    ▼
+[ main.py ] ──(YOLOv8 vision detection)──► [ Rules Engine ] ──► [ PriorityTag & Summary ]
+    │                                                                   │
+    └─────────────────────── Writes Live Record ────────────────────────┘
+                                        │
+                                        ▼
+                                 [ data/bos.db ]  <── (Shared SQLite Database)
+                                        ▲
+                                        │ Reads Latest Records (Polls every 3s)
+                                        │
+                                   [ app.py ]
+                                        │
+                                        ▼
+                            [ http://127.0.0.1:5000 ]
+                           (Live Dashboard Screen)

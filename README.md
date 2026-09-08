@@ -51,9 +51,9 @@ This automatically starts `src/app.py`, opens `http://127.0.0.1:5000` in your we
   .\venv\Scripts\python.exe src/main.py --cam 2
   ```
 
-### 3. Run Phase Verifications
+### 3. Run System Test Suite
 ```powershell
-.\venv\Scripts\python.exe scripts/verify_phase6.py
+.\venv\Scripts\python.exe scripts/test_system.py
 ```
 
 ---
