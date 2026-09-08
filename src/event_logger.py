@@ -30,12 +30,23 @@ def log_event(event_dict):
     try:
         # Convert ISO format string back to datetime object for SQLite
         dt_obj = datetime.datetime.fromisoformat(event_dict['timestamp'])
+        reason_codes_val = event_dict.get('reason_codes')
+        if isinstance(reason_codes_val, list):
+            reason_codes_str = ", ".join(reason_codes_val)
+        else:
+            reason_codes_str = reason_codes_val
+
         db_event = Event(
             timestamp=dt_obj,
             zone=event_dict['zone'],
             object=event_dict['object'],
             confidence=event_dict['confidence'],
-            source=event_dict.get('source', 'real')
+            source=event_dict.get('source', 'real'),
+            urgency=event_dict.get('urgency'),
+            reason_codes=reason_codes_str,
+            historical_avg=event_dict.get('historical_avg'),
+            priority_tag_json=event_dict.get('priority_tag_json'),
+            summary_text=event_dict.get('summary_text')
         )
         session.add(db_event)
         session.commit()

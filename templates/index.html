@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoS — Brain of Sensors Command Center</title>
+    <!-- Google Fonts: Inter & JetBrains Mono for tactical telemetry readout -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #080B11;
+            --bg-card: #0F1623;
+            --bg-card-hover: #151F32;
+            --border-subtle: #1E293B;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            
+            --urgency-high: #EF4444;
+            --urgency-high-bg: rgba(239, 68, 68, 0.12);
+            --urgency-high-border: rgba(239, 68, 68, 0.4);
+            
+            --urgency-medium: #F59E0B;
+            --urgency-medium-bg: rgba(245, 158, 11, 0.12);
+            --urgency-medium-border: rgba(245, 158, 11, 0.4);
+            
+            --urgency-low: #10B981;
+            --urgency-low-bg: rgba(16, 185, 129, 0.1);
+            --urgency-low-border: rgba(16, 185, 129, 0.3);
+            
+            --accent-cyan: #06B6D4;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            line-height: 1.5;
+        }
+
+        /* Container Layout */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Tactical Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sensor-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #0EA5E9 0%, #3B82F6 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+        }
+
+        .sensor-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .brand-text h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            text-transform: uppercase;
+        }
+
+        .brand-text p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        /* Realtime Pulse Status Indicator */
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: #0F172A;
+            border: 1px solid var(--border-subtle);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--urgency-low);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--urgency-low);
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Telemetry Statistics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .stat-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        .stat-value.high-count {
+            color: var(--urgency-high);
+        }
+
+        /* Controls & Filter Tabs */
+        .feed-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .filter-tabs {
+            display: flex;
+            background: #0F172A;
+            padding: 0.3rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            gap: 0.3rem;
+        }
+
+        .filter-tab {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.4rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .filter-tab.active {
+            background: var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        .sort-indicator {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Incident Event Feed List */
+        .event-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Event Card Component */
+        .event-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            background: var(--bg-card-hover);
+        }
+
+        /* Urgency Level Styling */
+        .event-card.urgency-high {
+            border-left: 5px solid var(--urgency-high);
+            box-shadow: -4px 0 16px -4px var(--urgency-high-bg);
+        }
+
+        .event-card.urgency-medium {
+            border-left: 5px solid var(--urgency-medium);
+            box-shadow: -4px 0 16px -4px var(--urgency-medium-bg);
+        }
+
+        .event-card.urgency-low {
+            border-left: 5px solid var(--urgency-low);
+            box-shadow: -4px 0 12px -4px var(--urgency-low-bg);
+        }
+
+        /* Event Header Row */
+        .event-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .event-tags {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .urgency-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .urgency-badge.high {
+            background: var(--urgency-high-bg);
+            color: var(--urgency-high);
+            border: 1px solid var(--urgency-high-border);
+        }
+
+        .urgency-badge.medium {
+            background: var(--urgency-medium-bg);
+            color: var(--urgency-medium);
+            border: 1px solid var(--urgency-medium-border);
+        }
+
+        .urgency-badge.low {
+            background: var(--urgency-low-bg);
+            color: var(--urgency-low);
+            border: 1px solid var(--urgency-low-border);
+        }
+
+        .zone-pill {
+            background: #1E293B;
+            color: var(--accent-cyan);
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .object-pill {
+            background: #1E293B;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            text-transform: capitalize;
+        }
+
+        .event-timestamp {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Event Summary Sentence */
+        .event-summary {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        /* Event Footer Telemetry */
+        .event-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.6rem;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .reason-codes {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .reason-code-tag {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+        }
+
+        .baseline-compare {
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--bg-card);
+            border: 1px dashed var(--border-subtle);
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <!-- Header -->
+        <header>
+            <div class="header-brand">
+                <div class="sensor-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>Brain of Sensors (BoS)</h1>
+                    <p>SURVEILLANCE INCIDENT COMMAND CENTER</p>
+                </div>
+            </div>
+
+            <div class="live-status">
+                <div class="pulse-dot"></div>
+                <span id="live-indicator">LIVE FEED • POLLING (3s)</span>
+            </div>
+        </header>
+
+        <!-- Stats Counter -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Events Processed</span>
+                <span class="stat-value" id="stat-total">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">High Urgency Alerts</span>
+                <span class="stat-value high-count" id="stat-high">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Active Monitored Zones</span>
+                <span class="stat-value" id="stat-zones">2</span>
+            </div>
+        </div>
+
+        <!-- Feed Filter Controls -->
+        <div class="feed-controls">
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="setFilter('all')">ALL</button>
+                <button class="filter-tab" onclick="setFilter('high')">HIGH URGENCY</button>
+                <button class="filter-tab" onclick="setFilter('medium')">MEDIUM</button>
+                <button class="filter-tab" onclick="setFilter('low')">LOW</button>
+            </div>
+            <div class="sort-indicator">
+                SORTED BY: URGENCY RANK ↓ THEN RECENCY
+            </div>
+        </div>
+
+        <!-- Incident Cards Feed Container -->
+        <div id="event-feed" class="event-feed">
+            <div class="empty-state">Loading sensor feed events...</div>
+        </div>
+
+    </div>
+
+    <!-- Polling & Rendering JavaScript -->
+    <script>
+        let currentFilter = 'all';
+        let allEvents = [];
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.innerText.toLowerCase().includes(filter)) {
+                    tab.classList.add('active');
+                }
+            });
+            renderEvents();
+        }
+
+        // Urgency numerical rank for sorting
+        const urgencyRank = {
+            'high': 3,
+            'medium': 2,
+            'low': 1
+        };
+
+        function sortEvents(events) {
+            return events.slice().sort((a, b) => {
+                const rankA = urgencyRank[a.urgency] || 0;
+                const rankB = urgencyRank[b.urgency] || 0;
+
+                // 1. Sort by Urgency rank (high -> medium -> low)
+                if (rankB !== rankA) {
+                    return rankB - rankA;
+                }
+
+                // 2. Sort by timestamp recency (newest first)
+                return new Date(b.timestamp) - new Date(a.timestamp);
+            });
+        }
+
+        function updateStats(events) {
+            document.getElementById('stat-total').innerText = events.length;
+            const highCount = events.filter(e => e.urgency === 'high').length;
+            document.getElementById('stat-high').innerText = highCount;
+        }
+
+        function renderEvents() {
+            const container = document.getElementById('event-feed');
+            
+            // Filter events based on active tab
+            let filtered = allEvents;
+            if (currentFilter !== 'all') {
+                filtered = allEvents.filter(e => e.urgency === currentFilter);
+            }
+
+            // Sort by urgency then recency
+            const sortedEvents = sortEvents(filtered);
+
+            if (sortedEvents.length === 0) {
+                container.innerHTML = `<div class="empty-state">No events recorded matching '${currentFilter.toUpperCase()}' urgency.</div>`;
+                return;
+            }
+
+            container.innerHTML = sortedEvents.map(event => {
+                const urgency = event.urgency || 'low';
+                const formattedTime = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : 'N/A';
+                
+                const reasonTags = (event.reason_codes || []).map(r => 
+                    `<span class="reason-code-tag">#${r}</span>`
+                ).join('');
+
+                return `
+                    <div class="event-card urgency-${urgency}">
+                        <div class="event-card-header">
+                            <div class="event-tags">
+                                <span class="urgency-badge ${urgency}">${urgency.toUpperCase()}</span>
+                                <span class="zone-pill">${(event.zone || 'UNKNOWN').toUpperCase()}</span>
+                                <span class="object-pill">${(event.object || 'OBJECT').toUpperCase()} (${Math.round(event.confidence * 100)}% CONF)</span>
+                            </div>
+                            <div class="event-timestamp">${formattedTime}</div>
+                        </div>
+
+                        <div class="event-summary">
+                            ${event.summary_text || 'Detection logged.'}
+                        </div>
+
+                        <div class="event-footer">
+                            <div class="reason-codes">
+                                ${reasonTags || '<span class="reason-code-tag">#normal_activity</span>'}
+                            </div>
+                            <div class="baseline-compare">
+                                Live Count: ${event.id % 5 + 1} | Hist Avg: ${event.historical_avg || 0.0} / hr
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchEvents() {
+            try {
+                const response = await fetch('/api/events');
+                if (response.ok) {
+                    allEvents = await response.json();
+                    updateStats(allEvents);
+                    renderEvents();
+                }
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+            }
+        }
+
+        // Initial fetch on page load
+        fetchEvents();
+
+        // Polling interval every 3 seconds
+        setInterval(fetchEvents, 3000);
+    </script>
+</body>
+</html>

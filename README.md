@@ -53,7 +53,7 @@ python scripts/verify_phase2.py
 
 - [x] **Phase 1: Detection & Zone Logging** — Webcam + YOLOv8, log events by zone.
 - [x] **Phase 2: Storage & Historical Baseline** — Event database + 30-day synthetic history.
-- [ ] **Phase 3: Rules/Stats Engine** — Compare live events to baseline, decide urgency.
+- [x] **Phase 3: Rules/Stats Engine** — Compare live events to baseline, decide urgency.
 - [ ] **Phase 4: Priority Tagging** — Formalize urgency into a clean structured tag.
 - [ ] **Phase 5: LLM Summarizer** — Structured result → one plain-English sentence.
 - [ ] **Phase 6: Dashboard** — Live, color-coded feed of ranked incidents.
