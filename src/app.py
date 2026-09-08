@@ -52,6 +52,16 @@ def get_events():
                 urg_str = ev.urgency or "low"
                 summary = f"In {ev.zone}, a {ev.object} was detected with {urg_str} urgency."
 
+            # Parse live_count from priority_tag_json if available
+            live_count = 1
+            if ev.priority_tag_json:
+                try:
+                    import json
+                    tag_data = json.loads(ev.priority_tag_json)
+                    live_count = tag_data.get("live_count", 1)
+                except Exception:
+                    pass
+
             events_data.append({
                 "id": ev.id,
                 "timestamp": ev.timestamp.isoformat() if ev.timestamp else "",
@@ -62,6 +72,7 @@ def get_events():
                 "urgency": (ev.urgency or "low").lower(),
                 "reason_codes": reason_codes_list,
                 "historical_avg": round(float(ev.historical_avg or 0.0), 2),
+                "live_count": live_count,
                 "priority_tag_json": ev.priority_tag_json,
                 "summary_text": summary
             })
