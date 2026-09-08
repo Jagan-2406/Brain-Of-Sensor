@@ -34,17 +34,26 @@ Make sure you have an active Python virtual environment, then install the requir
 pip install -r requirements.txt
 ```
 
-### 2. Run the System
-Start the main webcam detection loop (this will automatically download the YOLOv8 model on the first run):
+### 2. Run the Full System (Dashboard + Vision Feed)
+Run both the Web Dashboard and the Webcam Vision Pipeline with one single command:
 ```powershell
-python src/main.py
+.\venv\Scripts\python.exe run_project.py
 ```
-*(By default, this uses your external webcam. To use your system's built-in webcam, run `python src/main.py --cam 1`)*
+This automatically starts `src/app.py`, opens `http://127.0.0.1:5000` in your web browser, and launches `src/main.py`.
 
-### 3. Verify Database & Synthetic History
-To verify the SQLite database and see the synthetic 30-day baseline generation, run the verification script:
+#### Running Separately in Two Terminals:
+- **Terminal 1 (Dashboard Server):**
+  ```powershell
+  .\venv\Scripts\python.exe src/app.py
+  ```
+- **Terminal 2 (Webcam Feed):**
+  ```powershell
+  .\venv\Scripts\python.exe src/main.py --cam 2
+  ```
+
+### 3. Run Phase Verifications
 ```powershell
-python scripts/verify_phase2.py
+.\venv\Scripts\python.exe scripts/verify_phase6.py
 ```
 
 ---
@@ -52,11 +61,11 @@ python scripts/verify_phase2.py
 ## 🗺️ Phase Roadmap
 
 - [x] **Phase 1: Detection & Zone Logging** — Webcam + YOLOv8, log events by zone.
-- [x] **Phase 2: Storage & Historical Baseline** — Event database + 30-day synthetic history.
-- [x] **Phase 3: Rules/Stats Engine** — Compare live events to baseline, decide urgency.
-- [ ] **Phase 4: Priority Tagging** — Formalize urgency into a clean structured tag.
-- [ ] **Phase 5: LLM Summarizer** — Structured result → one plain-English sentence.
-- [ ] **Phase 6: Dashboard** — Live, color-coded feed of ranked incidents.
+- [x] **Phase 2: Storage & Historical Baseline** — SQLite database + 30-day synthetic history.
+- [x] **Phase 3: Rules/Stats Engine** — Urgency decision & historical baseline comparison.
+- [x] **Phase 4: Priority Tagging** — Structured, versioned JSON PriorityTag schema.
+- [x] **Phase 5: LLM Summarizer** — Plain-English event summary sentence generation.
+- [x] **Phase 6: Dashboard** — Live, urgency-ranked, auto-refreshing command center UI.
 
 ---
 
