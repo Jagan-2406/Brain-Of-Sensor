@@ -14,6 +14,27 @@ NIGHT_HOURS = set(list(range(21, 24)) + list(range(0, 7)))
 # Baseline threshold (events/day) below which a nighttime hour is considered quiet
 NIGHT_BASELINE_THRESHOLD = 0.5
 
+# --- Object Risk Weight Table & Baseline Floor ---
+# Assigns a relative risk weight per detected object class.
+# This corrects for statistical rarity being mistaken for actual risk —
+# e.g. a rarely-seen harmless object (like a phone) should not outscore
+# a commonly-seen but security-relevant object (like a person).
+# Values can be tuned later without changing the core scoring logic.
+OBJECT_RISK_WEIGHT = {
+    "person": 1.0,
+    "vehicle": 0.8,
+    "car": 0.8,
+    "backpack": 0.4,
+    "cell phone": 0.05,
+    "chair": 0.0,
+    "bottle": 0.0,
+}
+DEFAULT_RISK_WEIGHT = 0.1  # applied to any object class not explicitly listed
+
+# Prevents runaway multipliers when an object's historical average is
+# near zero (e.g. an object rarely or never seen before in this zone).
+MIN_BASELINE = 0.1
+
 
 def score_event(event, live_count=1):
     """
@@ -33,6 +54,7 @@ def score_event(event, live_count=1):
         }
     """
     zone = event.get("zone", "zone_1")
+    obj_class = event.get("object", "person")
     raw_timestamp = event.get("timestamp")
 
     if isinstance(raw_timestamp, datetime.datetime):
@@ -53,14 +75,14 @@ def score_event(event, live_count=1):
     urgency = "low"
     reason_codes = []
 
-    # Rule 1: Frequency Multipliers against historical average
-    # Avoid division by zero: if historical_avg is very small (e.g. 0), treat any event count >= 3 as high
-    effective_avg = max(historical_avg, 0.1)
+    # Safe baseline floor to prevent divide-by-near-zero blowups
+    safe_average = max(historical_avg, MIN_BASELINE)
 
-    if live_count >= (HIGH_MULTIPLIER * effective_avg):
+    # Rule 1: Frequency Multipliers against historical average
+    if live_count >= (HIGH_MULTIPLIER * safe_average):
         reason_codes.append("unusual_zone_frequency")
         urgency = "high"
-    elif live_count >= (MEDIUM_MULTIPLIER * effective_avg):
+    elif live_count >= (MEDIUM_MULTIPLIER * safe_average):
         reason_codes.append("unusual_zone_frequency")
         urgency = "medium"
 
@@ -72,7 +94,13 @@ def score_event(event, live_count=1):
         elif urgency == "medium":
             urgency = "high"
 
-    # Rule 3: Default normal pattern
+    # Rule 3: Object Risk Weighting Layer
+    risk_weight = OBJECT_RISK_WEIGHT.get(obj_class, DEFAULT_RISK_WEIGHT)
+    if risk_weight <= 0.1:
+        urgency = "low"
+        reason_codes.append("low_risk_object_class")
+
+    # Rule 4: Default normal pattern
     if not reason_codes:
         urgency = "low"
         reason_codes = ["within_normal_pattern"]
