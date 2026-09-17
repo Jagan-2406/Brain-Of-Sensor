@@ -765,3 +765,26 @@ timestamp,zone,object,confidence
 2026-09-09T10:18:18.535700,zone_2,laptop,0.69,real
 2026-09-09T10:18:19.754769,zone_1,person,0.92,real
 2026-09-09T10:18:19.864018,zone_2,person,0.66,real
+2026-09-17T16:24:18.918805,zone_2,person,0.9,real
+2026-09-17T16:24:21.944177,zone_2,person,0.88,real
+2026-09-17T16:24:23.103440,zone_1,person,0.68,real
+2026-09-17T16:24:23.583781,zone_1,cat,0.6,real
+2026-09-17T16:24:24.956857,zone_2,person,0.68,real
+2026-09-17T16:24:26.562205,zone_1,person,0.64,real
+2026-09-17T16:24:29.295790,zone_1,cat,0.7,real
+2026-09-17T16:24:29.446631,zone_2,person,0.72,real
+2026-09-17T16:24:29.762180,zone_1,person,0.63,real
+2026-09-17T16:24:31.090794,zone_2,baseball bat,0.62,real
+2026-09-17T16:24:32.454387,zone_2,person,0.87,real
+2026-09-17T16:24:32.810563,zone_1,person,0.72,real
+2026-09-17T16:24:35.485733,zone_2,person,0.79,real
+2026-09-17T16:24:36.147515,zone_1,person,0.63,real
+2026-09-17T16:24:38.512875,zone_2,person,0.8,real
+2026-09-17T16:24:39.225160,zone_1,person,0.87,real
+2026-09-17T16:24:41.592754,zone_2,person,0.87,real
+2026-09-17T16:24:43.345177,zone_1,person,0.87,real
+2026-09-17T16:24:44.835805,zone_2,person,0.9,real
+2026-09-17T16:24:47.852185,zone_2,person,0.88,real
+2026-09-17T16:24:49.688066,zone_1,person,0.9,real
+2026-09-17T16:24:51.056036,zone_2,person,0.67,real
+2026-09-17T16:24:52.739739,zone_1,person,0.91,real
