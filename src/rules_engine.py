@@ -100,6 +100,16 @@ def score_event(event, live_count=1):
         urgency = "low"
         reason_codes.append("low_risk_object_class")
 
+    # Rule 3.5: Person Security Priority Layer
+    # Person detections meeting the confidence threshold are elevated to High Urgency for security monitoring
+    confidence = float(event.get("confidence", 0.0))
+    if obj_class == "person" and (confidence >= 0.50 or confidence == 0.0):
+        urgency = "high"
+        if "within_normal_pattern" in reason_codes:
+            reason_codes.remove("within_normal_pattern")
+        if "person_security_alert" not in reason_codes:
+            reason_codes.append("person_security_alert")
+
     # Rule 4: Default normal pattern
     if not reason_codes:
         urgency = "low"

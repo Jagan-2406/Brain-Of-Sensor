@@ -80,3 +80,37 @@ This automatically starts `src/app.py`, opens `http://127.0.0.1:5000` in your we
 - **Primary:** SDG 16 — Peace, Justice and Strong Institutions
 - **Secondary:** SDG 11 — Sustainable Cities and Communities
 - **Secondary:** SDG 9 — Industry, Innovation and Infrastructure
+
+---
+
+## 💻 Commands Reference Guide
+
+### 1. Run Full Project (Dashboard + Camera Vision Feed)
+```powershell
+.\venv\Scripts\python.exe run_project.py
+```
+*(Starts Flask Dashboard at http://127.0.0.1:5000 and opens System Camera feed simultaneously).*
+
+### 2. Run Components Separately
+- **Web Dashboard Server Only:**
+  ```powershell
+  .\venv\Scripts\python.exe src/app.py
+  ```
+- **System Built-in Camera Feed Only:**
+  ```powershell
+  .\venv\Scripts\python.exe src/main.py --cam 1
+  ```
+- **External Camera Feed Only:**
+  ```powershell
+  .\venv\Scripts\python.exe src/main.py --cam 2
+  ```
+
+### 3. Run Master System Test Suite (All 6 Phases)
+```powershell
+.\venv\Scripts\python.exe scripts/test_system.py
+```
+
+### 4. Install Dependencies
+```powershell
+.\venv\Scripts\pip.exe install -r requirements.txt
+```

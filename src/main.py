@@ -35,6 +35,7 @@ def main():
     # Dictionary to keep track of last event times for cooldown
     # Key: (zone, object_class_name), Value: timestamp (float)
     last_event_time = {}
+    last_urgency = {}
     COOLDOWN_SECONDS = 3.0
     CONFIDENCE_THRESHOLD = args.conf
     
@@ -76,8 +77,14 @@ def main():
                 # Check cooldown
                 current_time = time.time()
                 event_key = (zone, class_name)
-                
-                current_urgency = "low"
+
+                # Track and persist urgency per event key across cooldown frames
+                if class_name == "person":
+                    current_urgency = "high"
+                elif event_key in last_urgency:
+                    current_urgency = last_urgency[event_key]
+                else:
+                    current_urgency = "low"
                 
                 if event_key not in last_event_time or (current_time - last_event_time[event_key] >= COOLDOWN_SECONDS):
                     now_dt = datetime.datetime.now()
@@ -109,12 +116,15 @@ def main():
                     
                     # Evaluate Rules Engine
                     score_res = score_event(event_dict, live_count=live_count)
-                    event_dict["urgency"] = score_res["urgency"]
+                    event_dict["urgency"] = "high" if class_name == "person" else score_res["urgency"]
                     event_dict["reason_codes"] = score_res["reason_codes"]
+                    if class_name == "person" and "person_security_alert" not in event_dict["reason_codes"]:
+                        event_dict["reason_codes"].append("person_security_alert")
                     event_dict["historical_avg"] = score_res["historical_average"]
                     
                     # Build formal PriorityTag (Phase 4)
                     priority_tag = build_priority_tag(event_dict, score_res)
+                    priority_tag.urgency = "high" if class_name == "person" else priority_tag.urgency
                     event_dict["priority_tag_json"] = priority_tag.to_json()
                     
                     # Generate and validate plain-English summary (Phase 5)
@@ -122,7 +132,8 @@ def main():
                     validated_summary = validate_summary(raw_summary, priority_tag)
                     event_dict["summary_text"] = validated_summary
                     
-                    current_urgency = score_res["urgency"]
+                    current_urgency = "high" if class_name == "person" else score_res["urgency"]
+                    last_urgency[event_key] = current_urgency
                     
                     log_event(event_dict)
                     print(f"Logged Event [{current_urgency.upper()}]: {zone} | {class_name} | Summary: '{validated_summary}'")
@@ -131,16 +142,19 @@ def main():
                     last_event_time[event_key] = current_time
                 
                 # Color code bounding box by urgency: High=Red, Medium=Yellow, Low=Green
-                if current_urgency == "high":
-                    color = (0, 0, 255)
+                if class_name == "person" or current_urgency == "high":
+                    color = (0, 0, 255) # Red for HIGH priority
+                    urgency_label = "HIGH"
                 elif current_urgency == "medium":
-                    color = (0, 255, 255)
+                    color = (0, 255, 255) # Yellow for MEDIUM priority
+                    urgency_label = "MEDIUM"
                 else:
-                    color = (0, 255, 0)
+                    color = (0, 255, 0) # Green for LOW priority
+                    urgency_label = "LOW"
 
                 # Draw bounding box and label for visualization
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                label = f"{class_name} {conf:.2f} ({zone}) [{current_urgency.upper()}]"
+                label = f"{class_name} {conf:.2f} ({zone}) [{urgency_label}]"
                 cv2.putText(frame, label, (x1, max(y1 - 10, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 
         # Display the live feed
