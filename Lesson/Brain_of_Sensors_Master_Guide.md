@@ -17,7 +17,7 @@ Traditional physical security camera systems suffer from **Alert Fatigue**. Stan
 
 ## 🏗️ End-to-End System Architecture & Pipeline
 
-```text
+  
 ┌────────────────┐      ┌─────────────────────────┐      ┌─────────────────────────┐
 │   Webcam Feed  │ ───► │  YOLOv8 Detection &     │ ───► │ Zone Mapping &          │
 │   (OpenCV)     │      │  Confidence Filtering   │      │ 3-Second Cooldown       │
@@ -25,7 +25,7 @@ Traditional physical security camera systems suffer from **Alert Fatigue**. Stan
                                                                       │
                                                                       ▼
 ┌────────────────┐      ┌─────────────────────────┐      ┌─────────────────────────┐
-│ Live Dashboard │ ◄─── │ SQLite Storage          │ ◄─── │ Rules / Stats Engine    │
+│ Live Dashboard │ ◄─── │     SQLite Storage      │ ◄─── │ Rules / Stats Engine    │
 │ (Flask UI)     │      │ (events table in DB)    │      │ (30-Day Hist Avg Comp)  │
 └────────────────┘      └─────────────────────────┘      └─────────────────────────┘
         ▲                                                             │
