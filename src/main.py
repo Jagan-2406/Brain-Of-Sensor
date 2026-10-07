@@ -156,7 +156,8 @@ def main():
                 event_key = (zone, class_name)
 
                 # Track and persist urgency per event key across cooldown frames
-                if class_name == "human":
+                high_urgency_classes = ("human", "vehicle")
+                if class_name in high_urgency_classes:
                     current_urgency = "high"
                 elif event_key in last_urgency:
                     current_urgency = last_urgency[event_key]
@@ -193,15 +194,13 @@ def main():
                     
                     # Evaluate Rules Engine
                     score_res = score_event(event_dict, live_count=live_count)
-                    event_dict["urgency"] = "high" if class_name == "human" else score_res["urgency"]
+                    event_dict["urgency"] = score_res["urgency"]
                     event_dict["reason_codes"] = score_res["reason_codes"]
-                    if class_name == "human" and "person_security_alert" not in event_dict["reason_codes"]:
-                        event_dict["reason_codes"].append("person_security_alert")
                     event_dict["historical_avg"] = score_res["historical_average"]
                     
                     # Build formal PriorityTag (Phase 4)
                     priority_tag = build_priority_tag(event_dict, score_res)
-                    priority_tag.urgency = "high" if class_name == "human" else priority_tag.urgency
+                    priority_tag.urgency = score_res["urgency"]
                     event_dict["priority_tag_json"] = priority_tag.to_json()
                     
                     # Generate and validate plain-English summary (Phase 5)
@@ -209,7 +208,7 @@ def main():
                     validated_summary = validate_summary(raw_summary, priority_tag)
                     event_dict["summary_text"] = validated_summary
                     
-                    current_urgency = "high" if class_name == "human" else score_res["urgency"]
+                    current_urgency = score_res["urgency"]
                     last_urgency[event_key] = current_urgency
                     
                     log_event(event_dict)
@@ -218,15 +217,15 @@ def main():
                     # Update cooldown
                     last_event_time[event_key] = current_time
                 
-                # Color code bounding box: STRICT REQUIREMENT — ONLY real human is RED (0, 0, 255). No other object can be RED.
-                if class_name == "human":
-                    color = (0, 0, 255) # RED strictly reserved for real human
+                # Color code bounding box: High Urgency Security Classes (human, vehicle) = RED (0,0,255)
+                if class_name in high_urgency_classes or current_urgency == "high":
+                    color = (0, 0, 255) # RED for High Urgency (human, vehicle)
                     urgency_label = "HIGH"
-                elif current_urgency in ("medium", "high"):
-                    color = (0, 255, 255) # Yellow for MEDIUM/HIGH priority non-human objects
-                    urgency_label = current_urgency.upper()
+                elif current_urgency == "medium":
+                    color = (0, 255, 255) # Yellow for MEDIUM priority objects
+                    urgency_label = "MEDIUM"
                 else:
-                    color = (0, 255, 0) # Green for LOW priority non-human objects
+                    color = (0, 255, 0) # Green for LOW priority objects
                     urgency_label = "LOW"
 
                 # Draw bounding box and label for visualization
