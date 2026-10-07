@@ -66,6 +66,10 @@ This automatically starts `src/app.py`, opens `http://127.0.0.1:5000` in your we
 - [x] **Phase 4: Priority Tagging** — Structured, versioned JSON PriorityTag schema.
 - [x] **Phase 5: LLM Summarizer** — Plain-English event summary sentence generation.
 - [x] **Phase 6: Dashboard** — Live, urgency-ranked, auto-refreshing command center UI.
+- [x] **Liveness Bug Fix** — Photo/image detection heuristics (`liveness_check.py`).
+- [x] **Feature 1: Multi-Page UI** — Live Feed, History, Analytics, and Settings (`base.html`).
+- [x] **Feature 2: 7-Day PDF Report** — Export PDF report (`report_generator.py`).
+- [x] **Feature 3: Audio Alert** — High-priority notification chime sound (`alert.mp3`).
 
 ---
 

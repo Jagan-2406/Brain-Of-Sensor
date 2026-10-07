@@ -9,6 +9,7 @@ from rules_engine import score_event
 from priority_tag import build_priority_tag
 from summarizer import summarize_event, validate_summary
 from database import SessionLocal, Event, extract
+import liveness_check
 
 def main():
     parser = argparse.ArgumentParser(description="BoS Phase 3 - Rules Engine")
@@ -73,6 +74,10 @@ def main():
                 
                 # Determine zone
                 zone = get_zone(x_center, frame_width)
+
+                # Post-processing liveness check for person detections
+                if class_name == "person":
+                    class_name = liveness_check.classify_person_detection(zone, frame, (x1, y1, x2, y2))
                 
                 # Check cooldown
                 current_time = time.time()
@@ -141,15 +146,15 @@ def main():
                     # Update cooldown
                     last_event_time[event_key] = current_time
                 
-                # Color code bounding box by urgency: High=Red, Medium=Yellow, Low=Green
-                if class_name == "person" or current_urgency == "high":
-                    color = (0, 0, 255) # Red for HIGH priority
+                # Color code bounding box: STRICT REQUIREMENT — ONLY real human ('person') is RED (0, 0, 255). No other object can be RED.
+                if class_name == "person":
+                    color = (0, 0, 255) # RED strictly reserved for real human
                     urgency_label = "HIGH"
-                elif current_urgency == "medium":
-                    color = (0, 255, 255) # Yellow for MEDIUM priority
-                    urgency_label = "MEDIUM"
+                elif current_urgency in ("medium", "high"):
+                    color = (0, 255, 255) # Yellow for MEDIUM/HIGH priority non-person objects
+                    urgency_label = current_urgency.upper()
                 else:
-                    color = (0, 255, 0) # Green for LOW priority
+                    color = (0, 255, 0) # Green for LOW priority non-person objects
                     urgency_label = "LOW"
 
                 # Draw bounding box and label for visualization

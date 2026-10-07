@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% set active_page = 'analytics' %}
+
+{% block title %}BoS — System Analytics & Telemetry{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h2>Surveillance Analytics & Telemetry Metrics</h2>
+        <p>7-day spatial zone activity and urgency distribution analytics</p>
+    </div>
+    <a href="/api/report/weekly" target="_blank" class="btn btn-primary">
+        📄 Download Last 7 Days (PDF)
+    </a>
+</div>
+
+<!-- Key Performance Telemetry Indicators -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total 7-Day Incidents</span>
+        <span class="stat-value" id="kpi-total">0</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">High Urgency Rate</span>
+        <span class="stat-value high-count" id="kpi-high-pct">0.0%</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Primary Active Zone</span>
+        <span class="stat-value" id="kpi-top-zone" style="font-size: 1.2rem; color: var(--accent-cyan);">Zone 1</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Mean Detection Confidence</span>
+        <span class="stat-value" id="kpi-avg-conf" style="font-size: 1.5rem; color: var(--text-primary);">0.0%</span>
+    </div>
+</div>
+
+<!-- Main Daily Trend Chart -->
+<div class="chart-card" style="margin-bottom: 1.5rem;">
+    <div class="chart-title">7-Day Daily Incident Activity Trend</div>
+    <div style="height: 280px; position: relative;">
+        <canvas id="dailyTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Analytics Charts Grid -->
+<div class="charts-grid">
+    <div class="chart-card">
+        <div class="chart-title">Urgency Level Distribution (Last 7 Days)</div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="urgencyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-title">Incidents Frequency by Zone</div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="zoneChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadAnalyticsData() {
+        try {
+            const res = await fetch('/api/analytics/summary');
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Update KPI Cards
+                document.getElementById('kpi-total').innerText = (data.total_events || 0).toLocaleString();
+                document.getElementById('kpi-high-pct').innerText = (data.high_urgency_pct || 0) + '%';
+                document.getElementById('kpi-top-zone').innerText = data.top_active_zone || 'Zone 1';
+                document.getElementById('kpi-avg-conf').innerText = (data.avg_confidence_pct || 0) + '%';
+
+                // Render Charts
+                renderDailyTrendChart(data.daily_trend || {});
+                renderUrgencyChart(data.urgency_counts || {});
+                renderZoneChart(data.zone_counts || {});
+            }
+        } catch (err) {
+            console.error("Analytics load error:", err);
+        }
+    }
+
+    function renderDailyTrendChart(trendData) {
+        const ctx = document.getElementById('dailyTrendChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+        gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Object.keys(trendData),
+                datasets: [{
+                    label: 'Daily Incident Volume',
+                    data: Object.values(trendData),
+                    borderColor: '#06B6D4',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#06B6D4',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { color: '#94A3B8' }, grid: { color: '#1E293B' } },
+                    y: { ticks: { color: '#94A3B8' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { labels: { color: '#94A3B8' } }
+                }
+            }
+        });
+    }
+
+    function renderUrgencyChart(urgencyData) {
+        const ctx = document.getElementById('urgencyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High Urgency', 'Medium Urgency', 'Low Urgency'],
+                datasets: [{
+                    data: [urgencyData.high || 0, urgencyData.medium || 0, urgencyData.low || 0],
+                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981'],
+                    borderColor: '#0F1623',
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94A3B8', padding: 15 } }
+                }
+            }
+        });
+    }
+
+    function renderZoneChart(zoneData) {
+        const ctx = document.getElementById('zoneChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(zoneData),
+                datasets: [{
+                    label: 'Total Incidents Logged',
+                    data: Object.values(zoneData),
+                    backgroundColor: ['#06B6D4', '#3B82F6'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { color: '#94A3B8' }, grid: { color: '#1E293B' } },
+                    y: { ticks: { color: '#94A3B8' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { labels: { color: '#94A3B8' } }
+                }
+            }
+        });
+    }
+
+    loadAnalyticsData();
+</script>
+{% endblock %}

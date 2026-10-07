@@ -5,3 +5,4 @@ sqlalchemy
 anthropic
 python-dotenv
 flask
+fpdf2

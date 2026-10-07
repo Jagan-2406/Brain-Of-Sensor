@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% set active_page = 'history' %}
+
+{% block title %}BoS — Incident History Log{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h2>Incident History Log</h2>
+        <p>Searchable historical audit trail of all recorded surveillance events</p>
+    </div>
+    <!-- Feature 2: Download 7-Day PDF Report Button -->
+    <a href="/api/report/weekly" target="_blank" class="btn btn-primary">
+        📄 Download Last 7 Days (PDF)
+    </a>
+</div>
+
+<!-- Filter Controls -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label">Urgency</span>
+        <select id="hist-urgency" class="form-select" onchange="fetchHistoryData()">
+            <option value="all">All Urgencies</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">Zone</span>
+        <select id="hist-zone" class="form-select" onchange="fetchHistoryData()">
+            <option value="all">All Zones</option>
+            <option value="zone_1">Zone 1</option>
+            <option value="zone_2">Zone 2</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">Object Class</span>
+        <select id="hist-object" class="form-select" onchange="fetchHistoryData()">
+            <option value="all">All Objects</option>
+            <option value="person">Person</option>
+            <option value="vehicle">Vehicle / Car</option>
+            <option value="image">Image / Photo</option>
+            <option value="cell phone">Cell Phone</option>
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 1; min-width: 200px;">
+        <span class="filter-label">Search Summary</span>
+        <input type="text" id="hist-search" class="form-input" placeholder="Search keywords..." onkeyup="filterHistoryTable()">
+    </div>
+</div>
+
+<!-- History Data Table -->
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Zone</th>
+                <th>Object</th>
+                <th>Confidence</th>
+                <th>Urgency</th>
+                <th>Reason Flags</th>
+                <th>Summary Sentence</th>
+            </tr>
+        </thead>
+        <tbody id="history-tbody">
+            <tr>
+                <td colspan="7" class="empty-state">Loading history logs...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let rawHistoryEvents = [];
+
+    async function fetchHistoryData() {
+        const urgency = document.getElementById('hist-urgency').value;
+        const zone = document.getElementById('hist-zone').value;
+        const object = document.getElementById('hist-object').value;
+
+        const params = new URLSearchParams({ urgency, zone, object });
+
+        try {
+            const res = await fetch(`/api/events/history?${params.toString()}`);
+            if (res.ok) {
+                rawHistoryEvents = await res.json();
+                filterHistoryTable();
+            }
+        } catch (err) {
+            console.error("History fetch error:", err);
+        }
+    }
+
+    function filterHistoryTable() {
+        const query = document.getElementById('hist-search').value.toLowerCase().trim();
+        const tbody = document.getElementById('history-tbody');
+
+        let filtered = rawHistoryEvents;
+        if (query) {
+            filtered = filtered.filter(e => 
+                (e.summary_text || '').toLowerCase().includes(query) ||
+                (e.zone || '').toLowerCase().includes(query) ||
+                (e.object || '').toLowerCase().includes(query)
+            );
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">No incident records match the selected filters.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(ev => {
+            const urgency = (ev.urgency || 'low').toLowerCase();
+            const tsFormatted = ev.timestamp ? new Date(ev.timestamp).toLocaleString() : 'N/A';
+            const reasonTags = (ev.reason_codes || []).map(r => `<span class="reason-code-tag">#${r}</span>`).join(' ');
+
+            return `
+                <tr>
+                    <td style="font-family: var(--font-mono); font-size: 0.8rem;">${tsFormatted}</td>
+                    <td><span class="zone-pill">${(ev.zone || 'ZONE').toUpperCase()}</span></td>
+                    <td><span class="object-pill">${(ev.object || 'OBJECT').toUpperCase()}</span></td>
+                    <td style="font-family: var(--font-mono);">${Math.round((ev.confidence || 0) * 100)}%</td>
+                    <td><span class="urgency-badge ${urgency}">${urgency.toUpperCase()}</span></td>
+                    <td>${reasonTags || '<span class="reason-code-tag">#normal</span>'}</td>
+                    <td style="color: var(--text-primary);">${ev.summary_text || 'Detection logged.'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    fetchHistoryData();
+</script>
+{% endblock %}

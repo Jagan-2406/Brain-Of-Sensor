@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}BoS — Live Command Center{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h2>Live Incident Feed</h2>
+        <p>Real-time surveillance anomaly detection & incident monitoring</p>
+    </div>
+    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">
+        <span style="color: var(--urgency-low);">●</span> LIVE POLLING (3s)
+    </div>
+</div>
+
+<!-- Telemetry Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total Incidents</span>
+        <span class="stat-value" id="stat-total">0</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">High Urgency Alerts</span>
+        <span class="stat-value high-count" id="stat-high">0</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Active Monitored Zones</span>
+        <span class="stat-value" id="stat-zones">2</span>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label">Filter Urgency</span>
+        <select id="filter-urgency" class="form-select" onchange="renderLiveEvents()">
+            <option value="all">All Urgency Levels</option>
+            <option value="high">High Urgency Only</option>
+            <option value="medium">Medium Urgency Only</option>
+            <option value="low">Low Urgency Only</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">Filter Zone</span>
+        <select id="filter-zone" class="form-select" onchange="renderLiveEvents()">
+            <option value="all">All Zones</option>
+            <option value="zone_1">Zone 1</option>
+            <option value="zone_2">Zone 2</option>
+        </select>
+    </div>
+</div>
+
+<!-- Live Events Container -->
+<div id="event-feed" class="event-feed">
+    <div class="empty-state">Loading live sensor feed...</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let liveEventsData = [];
+
+    const urgencyRank = { 'high': 3, 'medium': 2, 'low': 1 };
+
+    function sortEvents(events) {
+        return events.slice().sort((a, b) => {
+            const rankA = urgencyRank[(a.urgency || '').toLowerCase()] || 0;
+            const rankB = urgencyRank[(b.urgency || '').toLowerCase()] || 0;
+            if (rankB !== rankA) return rankB - rankA;
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+    }
+
+    function renderLiveEvents() {
+        const container = document.getElementById('event-feed');
+        const selectedUrgency = document.getElementById('filter-urgency').value;
+        const selectedZone = document.getElementById('filter-zone').value;
+
+        let filtered = liveEventsData;
+
+        if (selectedUrgency !== 'all') {
+            filtered = filtered.filter(e => (e.urgency || '').toLowerCase() === selectedUrgency);
+        }
+        if (selectedZone !== 'all') {
+            filtered = filtered.filter(e => (e.zone || '').toLowerCase() === selectedZone);
+        }
+
+        const sorted = sortEvents(filtered);
+
+        if (sorted.length === 0) {
+            container.innerHTML = `<div class="empty-state">No matching live events recorded.</div>`;
+            return;
+        }
+
+        container.innerHTML = sorted.map(event => {
+            const urgency = (event.urgency || 'low').toLowerCase();
+            const formattedTime = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : 'N/A';
+            const reasonTags = (event.reason_codes || []).map(r => `<span class="reason-code-tag">#${r}</span>`).join('');
+
+            return `
+                <div class="event-card urgency-${urgency}">
+                    <div class="event-card-header">
+                        <div class="event-tags">
+                            <span class="urgency-badge ${urgency}">${urgency.toUpperCase()}</span>
+                            <span class="zone-pill">${(event.zone || 'ZONE').toUpperCase()}</span>
+                            <span class="object-pill">${(event.object || 'OBJECT').toUpperCase()} (${Math.round(event.confidence * 100)}% CONF)</span>
+                        </div>
+                        <div class="event-timestamp">${formattedTime}</div>
+                    </div>
+                    <div class="event-summary">
+                        ${event.summary_text || 'Detection logged.'}
+                    </div>
+                    <div class="event-footer">
+                        <div class="reason-codes">
+                            ${reasonTags || '<span class="reason-code-tag">#normal_activity</span>'}
+                        </div>
+                        <div class="baseline-compare">
+                            Live Count: ${event.live_count || 1} | Hist Avg: ${event.historical_avg || 0.0} / hr
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function fetchLiveFeed() {
+        try {
+            const res = await fetch('/api/events');
+            if (res.ok) {
+                liveEventsData = await res.json();
+
+                // Update stats
+                document.getElementById('stat-total').innerText = liveEventsData.length;
+                document.getElementById('stat-high').innerText = liveEventsData.filter(e => (e.urgency || '').toLowerCase() === 'high').length;
+
+                // Feature 3: Check for new high-priority alerts to trigger audio sound
+                checkAndTriggerHighPriorityAlert(liveEventsData);
+
+                renderLiveEvents();
+            }
+        } catch (err) {
+            console.error('Live feed fetch error:', err);
+        }
+    }
+
+    fetchLiveFeed();
+    setInterval(fetchLiveFeed, 3000);
+</script>
+{% endblock %}

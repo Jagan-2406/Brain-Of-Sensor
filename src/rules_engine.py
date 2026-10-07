@@ -28,6 +28,7 @@ OBJECT_RISK_WEIGHT = {
     "cell phone": 0.05,
     "chair": 0.0,
     "bottle": 0.0,
+    "image": 0.0,
 }
 DEFAULT_RISK_WEIGHT = 0.1  # applied to any object class not explicitly listed
 
