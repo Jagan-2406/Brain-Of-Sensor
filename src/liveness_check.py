@@ -112,21 +112,20 @@ def has_natural_motion(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, 
 
 def classify_person_detection(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> str:
     """
-    Combines rectangular frame detection and micro-motion heuristics to accurately classify 
-    whether a 'person' detection is a real human or a flat printed photo / phone screen image.
-    Returns 'image' if a photo or phone screen is detected, else 'human'.
+    Classifies a YOLO human detection.
+    Guarantees that real humans in front of the camera are ALWAYS labeled as 'human' (RED box, HIGH priority).
+    Relabels to 'image' ONLY when a flat, static held photo/screen is confirmed.
     """
-    is_frame_present = has_rectangular_frame(frame, bbox)
     is_motion_present = has_natural_motion(zone, frame, bbox)
 
-    # 1. Strongest photo signal: Rectangular phone screen / photo card border detected
+    # 1. Real human in camera view has motion / micro-shifts -> ALWAYS 'human'
+    if is_motion_present:
+        return "human"
+
+    # 2. Only if static (no human motion/breathing) AND rectangular photo border exists -> 'image'
+    is_frame_present = has_rectangular_frame(frame, bbox)
     if is_frame_present:
         return "image"
 
-    # 2. Static motion signal: Zero natural human movement / breathing detected across frames
-    if not is_motion_present:
-        return "image"
-
-    # 3. Otherwise confirmed real human
     return "human"
 

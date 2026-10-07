@@ -11,6 +11,8 @@ from summarizer import summarize_event, validate_summary
 from database import SessionLocal, Event, extract
 import liveness_check
 
+import torch
+
 # Normalized Project Class Label Mapping
 LABEL_MAP = {
     # Human mapping
@@ -56,23 +58,37 @@ LABEL_MAP = {
 }
 
 def main():
-    parser = argparse.ArgumentParser(description="BoS Surveillance Intelligence with YOLOv11")
+    parser = argparse.ArgumentParser(description="BoS Surveillance Intelligence with YOLOv11 & GPU Acceleration")
     parser.add_argument('--cam', type=int, default=1, help="Camera number (1 for system built-in, 2 for external)")
     parser.add_argument('--conf', type=float, default=0.6, help="Minimum confidence threshold (e.g., 0.6)")
     parser.add_argument('--model', type=str, default='yolo11s.pt', help="YOLOv11 model weights (yolo11n.pt, yolo11s.pt, yolo11m.pt)")
+    parser.add_argument('--device', type=str, default=None, help="Inference device ('cuda' or 'cpu')")
     args = parser.parse_args()
 
+    # Determine GPU vs CPU hardware target
+    if args.device:
+        device_target = args.device
+    else:
+        device_target = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    if torch.cuda.is_available() and device_target != 'cpu':
+        device_name = torch.cuda.get_device_name(0)
+        hud_device_label = f"GPU: {device_name}"
+    else:
+        hud_device_label = "CPU Mode"
+
     # Load YOLOv11 model
-    print(f"Loading YOLOv11 High-Performance Model ({args.model})...")
+    print(f"Loading YOLOv11 Model ({args.model}) on [{hud_device_label}]...")
     model = YOLO(args.model)
     
     # OpenCV is 0-indexed, so we subtract 1 from the user's choice
     cv_cam_index = args.cam - 1
     cap = cv2.VideoCapture(cv_cam_index, cv2.CAP_DSHOW)
     
-    # Force standard resolution to avoid DSHOW glitches/artifacting
+    # Force standard resolution and minimum buffer size to eliminate webcam lag
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     if not cap.isOpened():
         print("Error: Could not open webcam.")
@@ -86,7 +102,7 @@ def main():
     
     prev_frame_time = time.time()
     
-    print("Starting YOLOv11 webcam feed with Rules Engine. Press 'q' to quit.")
+    print(f"Starting YOLOv11 webcam feed on {hud_device_label}. Press 'q' to quit.")
     
     while True:
         loop_start_time = time.time()
@@ -97,9 +113,9 @@ def main():
             
         frame_height, frame_width = frame.shape[:2]
         
-        # Run YOLOv11 inference with precision timing
+        # Run YOLOv11 GPU accelerated inference with precision timing
         inference_start = time.time()
-        results = model(frame, verbose=False)
+        results = model(frame, device=device_target, verbose=False)
         inference_time_ms = (time.time() - inference_start) * 1000.0
         
         detection_count = 0
@@ -221,7 +237,7 @@ def main():
         # Performance Metrics HUD Overlay
         loop_duration = time.time() - loop_start_time
         fps = 1.0 / max(loop_duration, 0.001)
-        hud_text = f"YOLOv11 | FPS: {fps:.1f} | Inference: {inference_time_ms:.1f}ms | Detections: {detection_count}"
+        hud_text = f"YOLOv11 [{hud_device_label}] | FPS: {fps:.1f} | Inference: {inference_time_ms:.1f}ms | Detections: {detection_count}"
         cv2.rectangle(frame, (0, 0), (frame_width, 24), (15, 22, 35), -1)
         cv2.putText(frame, hud_text, (10, 17), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
                 
