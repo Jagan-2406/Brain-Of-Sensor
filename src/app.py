@@ -107,14 +107,17 @@ def get_analytics_summary():
         urgency_counts = {"high": 0, "medium": 0, "low": 0}
         zone_counts = {"Zone 1 (Left Field)": 0, "Zone 2 (Right Field)": 0}
         object_mapping = {
-            "person": "Person",
-            "car": "Vehicle / Car",
-            "vehicle": "Vehicle / Car",
-            "image": "Photo / Image",
-            "cell phone": "Cell Phone",
+            "human": "Human",
+            "person": "Human",
+            "vehicle": "Vehicle",
+            "car": "Vehicle",
+            "animal": "Animal",
             "backpack": "Backpack",
-            "bottle": "Bottle",
-            "chair": "Chair"
+            "cellphone": "Cellphone",
+            "cell phone": "Cellphone",
+            "chair": "Chair",
+            "pen": "Pen",
+            "image": "Photo / Image"
         }
         object_counts = {}
 

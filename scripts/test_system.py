@@ -41,15 +41,15 @@ def test_part1_liveness_and_zones():
     dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
     # Liveness check on empty frame defaults to 'person' (motion buffer < 5) or 'image'
     res = liveness_check.classify_person_detection("zone_1", dummy_frame, (100, 100, 200, 300))
-    assert res in {"person", "image"}
+    assert res in {"human", "person", "image"}
     print(f"  [PASS] Liveness classifier returned: '{res}'")
 
 
 def test_part2_rules_risk_weighting_and_priority_tag():
     print("\n--- Test 2: Rules Engine, Risk Weighting & PriorityTag ---")
     
-    # Test real person event (high urgency)
-    person_event = {"timestamp": datetime.datetime.now().isoformat(), "zone": "zone_1", "object": "person", "confidence": 0.92}
+    # Test real human event (high urgency)
+    person_event = {"timestamp": datetime.datetime.now().isoformat(), "zone": "zone_1", "object": "human", "confidence": 0.92}
     score_res = score_event(person_event, live_count=12)
     assert score_res["urgency"] == "high"
     assert "person_security_alert" in score_res["reason_codes"]

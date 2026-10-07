@@ -11,14 +11,59 @@ from summarizer import summarize_event, validate_summary
 from database import SessionLocal, Event, extract
 import liveness_check
 
+# Normalized Project Class Label Mapping
+LABEL_MAP = {
+    # Human mapping
+    "person": "human",
+    "human": "human",
+
+    # Vehicles mapping
+    "car": "vehicle",
+    "truck": "vehicle",
+    "bus": "vehicle",
+    "motorcycle": "vehicle",
+    "bicycle": "vehicle",
+    "vehicle": "vehicle",
+
+    # Animals mapping
+    "dog": "animal",
+    "cat": "animal",
+    "bird": "animal",
+    "horse": "animal",
+    "sheep": "animal",
+    "cow": "animal",
+    "bear": "animal",
+    "elephant": "animal",
+    "animal": "animal",
+
+    # Personal Items & Furniture mapping
+    "backpack": "backpack",
+    "handbag": "backpack",
+    "suitcase": "backpack",
+
+    "cell phone": "cellphone",
+    "cellphone": "cellphone",
+
+    "chair": "chair",
+    "sofa": "chair",
+    "bench": "chair",
+
+    "pen": "pen",
+    "pencil": "pen",
+
+    # Photo liveness classifier output
+    "image": "image"
+}
+
 def main():
-    parser = argparse.ArgumentParser(description="BoS Phase 3 - Rules Engine")
+    parser = argparse.ArgumentParser(description="BoS Surveillance Intelligence with YOLOv11")
     parser.add_argument('--cam', type=int, default=1, help="Camera number (1 for system built-in, 2 for external)")
     parser.add_argument('--conf', type=float, default=0.6, help="Minimum confidence threshold (e.g., 0.6)")
-    parser.add_argument('--model', type=str, default='yolov8s.pt', help="YOLO model size (yolov8n.pt, yolov8s.pt, etc.)")
+    parser.add_argument('--model', type=str, default='yolo11s.pt', help="YOLOv11 model weights (yolo11n.pt, yolo11s.pt, yolo11m.pt)")
     args = parser.parse_args()
 
-    # Load YOLOv8 model (will download if not present)
+    # Load YOLOv11 model
+    print(f"Loading YOLOv11 High-Performance Model ({args.model})...")
     model = YOLO(args.model)
     
     # OpenCV is 0-indexed, so we subtract 1 from the user's choice
@@ -34,15 +79,17 @@ def main():
         return
 
     # Dictionary to keep track of last event times for cooldown
-    # Key: (zone, object_class_name), Value: timestamp (float)
     last_event_time = {}
     last_urgency = {}
     COOLDOWN_SECONDS = 3.0
     CONFIDENCE_THRESHOLD = args.conf
     
-    print("Starting webcam feed with Rules Engine. Press 'q' to quit.")
+    prev_frame_time = time.time()
+    
+    print("Starting YOLOv11 webcam feed with Rules Engine. Press 'q' to quit.")
     
     while True:
+        loop_start_time = time.time()
         ret, frame = cap.read()
         if not ret:
             print("Error: Could not read frame from webcam.")
@@ -50,9 +97,13 @@ def main():
             
         frame_height, frame_width = frame.shape[:2]
         
-        # Run YOLOv8 inference
+        # Run YOLOv11 inference with precision timing
+        inference_start = time.time()
         results = model(frame, verbose=False)
+        inference_time_ms = (time.time() - inference_start) * 1000.0
         
+        detection_count = 0
+
         # Parse results
         for result in results:
             boxes = result.boxes
@@ -62,9 +113,12 @@ def main():
                 if conf < CONFIDENCE_THRESHOLD:
                     continue
                     
-                # Class name
-                class_id = int(box.cls[0])
-                class_name = model.names[class_id]
+                # Class name from YOLOv11 model
+                raw_class_id = int(box.cls[0])
+                raw_class_name = model.names[raw_class_id]
+
+                # Map to normalized project label
+                class_name = LABEL_MAP.get(raw_class_name, raw_class_name.lower())
                 
                 # Bounding box coordinates
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -75,16 +129,18 @@ def main():
                 # Determine zone
                 zone = get_zone(x_center, frame_width)
 
-                # Post-processing liveness check for person detections
-                if class_name == "person":
+                # Post-processing liveness check for human detections
+                if class_name in ("human", "person"):
                     class_name = liveness_check.classify_person_detection(zone, frame, (x1, y1, x2, y2))
                 
+                detection_count += 1
+
                 # Check cooldown
                 current_time = time.time()
                 event_key = (zone, class_name)
 
                 # Track and persist urgency per event key across cooldown frames
-                if class_name == "person":
+                if class_name == "human":
                     current_urgency = "high"
                 elif event_key in last_urgency:
                     current_urgency = last_urgency[event_key]
@@ -121,15 +177,15 @@ def main():
                     
                     # Evaluate Rules Engine
                     score_res = score_event(event_dict, live_count=live_count)
-                    event_dict["urgency"] = "high" if class_name == "person" else score_res["urgency"]
+                    event_dict["urgency"] = "high" if class_name == "human" else score_res["urgency"]
                     event_dict["reason_codes"] = score_res["reason_codes"]
-                    if class_name == "person" and "person_security_alert" not in event_dict["reason_codes"]:
+                    if class_name == "human" and "person_security_alert" not in event_dict["reason_codes"]:
                         event_dict["reason_codes"].append("person_security_alert")
                     event_dict["historical_avg"] = score_res["historical_average"]
                     
                     # Build formal PriorityTag (Phase 4)
                     priority_tag = build_priority_tag(event_dict, score_res)
-                    priority_tag.urgency = "high" if class_name == "person" else priority_tag.urgency
+                    priority_tag.urgency = "high" if class_name == "human" else priority_tag.urgency
                     event_dict["priority_tag_json"] = priority_tag.to_json()
                     
                     # Generate and validate plain-English summary (Phase 5)
@@ -137,7 +193,7 @@ def main():
                     validated_summary = validate_summary(raw_summary, priority_tag)
                     event_dict["summary_text"] = validated_summary
                     
-                    current_urgency = "high" if class_name == "person" else score_res["urgency"]
+                    current_urgency = "high" if class_name == "human" else score_res["urgency"]
                     last_urgency[event_key] = current_urgency
                     
                     log_event(event_dict)
@@ -146,24 +202,31 @@ def main():
                     # Update cooldown
                     last_event_time[event_key] = current_time
                 
-                # Color code bounding box: STRICT REQUIREMENT — ONLY real human ('person') is RED (0, 0, 255). No other object can be RED.
-                if class_name == "person":
+                # Color code bounding box: STRICT REQUIREMENT — ONLY real human is RED (0, 0, 255). No other object can be RED.
+                if class_name == "human":
                     color = (0, 0, 255) # RED strictly reserved for real human
                     urgency_label = "HIGH"
                 elif current_urgency in ("medium", "high"):
-                    color = (0, 255, 255) # Yellow for MEDIUM/HIGH priority non-person objects
+                    color = (0, 255, 255) # Yellow for MEDIUM/HIGH priority non-human objects
                     urgency_label = current_urgency.upper()
                 else:
-                    color = (0, 255, 0) # Green for LOW priority non-person objects
+                    color = (0, 255, 0) # Green for LOW priority non-human objects
                     urgency_label = "LOW"
 
                 # Draw bounding box and label for visualization
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                 label = f"{class_name} {conf:.2f} ({zone}) [{urgency_label}]"
                 cv2.putText(frame, label, (x1, max(y1 - 10, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        # Performance Metrics HUD Overlay
+        loop_duration = time.time() - loop_start_time
+        fps = 1.0 / max(loop_duration, 0.001)
+        hud_text = f"YOLOv11 | FPS: {fps:.1f} | Inference: {inference_time_ms:.1f}ms | Detections: {detection_count}"
+        cv2.rectangle(frame, (0, 0), (frame_width, 24), (15, 22, 35), -1)
+        cv2.putText(frame, hud_text, (10, 17), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
                 
         # Display the live feed
-        cv2.imshow("BoS - Live Feed", frame)
+        cv2.imshow("BoS - Live Feed (YOLOv11)", frame)
         
         # Exit condition
         if cv2.waitKey(1) & 0xFF == ord('q'):

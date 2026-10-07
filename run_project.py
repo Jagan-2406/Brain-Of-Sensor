@@ -3,7 +3,7 @@ BoS (Brain of Sensors) — Master Runner Script
 
 Launches both:
 1. Flask Web Dashboard (src/app.py) on http://127.0.0.1:5000
-2. YOLOv8 Live Vision Pipeline (src/main.py)
+2. YOLOv11 High-Performance Vision Pipeline (src/main.py)
 
 Usage:
   python run_project.py

@@ -1,10 +1,10 @@
 """
-Post-processing classifier run only on YOLOv8 'person' detections.
-Does not alter the YOLOv8 model or its other class outputs.
+Post-processing classifier run only on YOLO 'person' / 'human' detections.
+Does not alter the YOLO model or its other class outputs.
 
-Detects whether a 'person' detection is a real human or a flat printed photo/phone screen
+Detects whether a 'human' detection is a real living person or a flat printed photo / phone screen image
 using two combined heuristics:
-1. Rectangular Frame Contour Detection (Canny edges + 4-sided polygon check)
+1. Rectangular Frame Contour Detection (Canny edges + 4-sided polygon check for phone screen bezels / photo borders)
 2. Micro-Motion Variance Analysis (rolling buffer of cropped regions per zone)
 """
 
@@ -13,7 +13,7 @@ import numpy as np
 from typing import Dict, List, Tuple
 
 # Minimum pixel variance across consecutive frames to confirm natural human motion
-MIN_MOTION_VARIANCE = 5.0
+MIN_MOTION_VARIANCE = 4.0
 
 # Rolling buffer storing cropped region history per zone: { zone_name: [frame1_gray, frame2_gray, ...] }
 _ZONE_FRAME_BUFFERS: Dict[str, List[np.ndarray]] = {}
@@ -22,8 +22,8 @@ MAX_BUFFER_SIZE = 5
 
 def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> bool:
     """
-    Checks if a strong, 4-sided rectangular frame or screen border surrounds or sits
-    behind the detected person/face bounding box.
+    Checks if a 4-sided rectangular frame, screen border, or paper photo bezel surrounds
+    the detected person/face bounding box.
     """
     if frame is None or frame.size == 0:
         return False
@@ -31,9 +31,9 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = bbox
 
-    # Expand padding by 15% to capture any surrounding frame/bezel/border
-    pad_x = int((x2 - x1) * 0.15)
-    pad_y = int((y2 - y1) * 0.15)
+    # Expand padding by 20% to capture any surrounding frame/bezel/border/card
+    pad_x = int((x2 - x1) * 0.20)
+    pad_y = int((y2 - y1) * 0.20)
 
     px1 = max(0, x1 - pad_x)
     py1 = max(0, y1 - pad_y)
@@ -41,20 +41,22 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
     py2 = min(h, y2 + pad_y)
 
     crop = frame[py1:py2, px1:px2]
-    if crop.size == 0 or crop.shape[0] < 20 or crop.shape[1] < 20:
+    if crop.size == 0 or crop.shape[0] < 15 or crop.shape[1] < 15:
         return False
 
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
+    
+    # Canny edge detection suited for phone screen bezels and paper borders
+    edges = cv2.Canny(blurred, 30, 120)
 
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     crop_area = crop.shape[0] * crop.shape[1]
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        # Check contours that cover a significant portion of the cropped region (e.g. >= 15% of crop)
-        if area > crop_area * 0.15:
+        # Check contours that cover >= 10% of cropped region (phone screens, paper photos)
+        if area > crop_area * 0.10:
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, 0.04 * peri, True)
             # A 4-sided polygon represents a rectangular photo border or phone screen frame
@@ -67,7 +69,7 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
 def has_natural_motion(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> bool:
     """
     Analyzes micro-motion pixel variance across a 5-frame rolling buffer.
-    Returns True if natural movement is detected, False if static (like a held photo).
+    Returns True if natural human movement is detected, False if static (like a held photo).
     """
     if frame is None or frame.size == 0:
         return True
@@ -93,8 +95,8 @@ def has_natural_motion(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, 
     if len(buffer) > MAX_BUFFER_SIZE:
         buffer.pop(0)
 
-    # Assume real person until at least 5 frames are buffered to avoid false positives on 1st frame
-    if len(buffer) < MAX_BUFFER_SIZE:
+    # Need at least 3 frames buffered to evaluate motion
+    if len(buffer) < 3:
         return True
 
     # Calculate mean absolute pixel differences across consecutive buffered frames
@@ -105,26 +107,26 @@ def has_natural_motion(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, 
 
     mean_variance = float(np.mean(diffs))
 
-    # Real human breathing/micro-shifts yield variance >= MIN_MOTION_VARIANCE
     return mean_variance >= MIN_MOTION_VARIANCE
 
 
 def classify_person_detection(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> str:
     """
-    Combines rectangular frame and micro-motion heuristics to classify a YOLOv8 person detection.
-    Returns 'image' ONLY if a held static photo/screen is confirmed (both static and framed),
-    ensuring real humans in front of the camera are never misclassified as an image or placed in a green box.
+    Combines rectangular frame detection and micro-motion heuristics to accurately classify 
+    whether a 'person' detection is a real human or a flat printed photo / phone screen image.
+    Returns 'image' if a photo or phone screen is detected, else 'human'.
     """
     is_frame_present = has_rectangular_frame(frame, bbox)
     is_motion_present = has_natural_motion(zone, frame, bbox)
 
-    # Real human moving or present in live feed is ALWAYS 'person'
-    if is_motion_present:
-        return "person"
-
-    # Only classify as flat photo/screen if static AND framed
-    if is_frame_present and not is_motion_present:
+    # 1. Strongest photo signal: Rectangular phone screen / photo card border detected
+    if is_frame_present:
         return "image"
 
-    return "person"
+    # 2. Static motion signal: Zero natural human movement / breathing detected across frames
+    if not is_motion_present:
+        return "image"
+
+    # 3. Otherwise confirmed real human
+    return "human"
 

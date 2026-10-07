@@ -24,11 +24,13 @@ OBJECT_RISK_WEIGHT = {
     "person": 1.0,
     "vehicle": 0.8,
     "car": 0.8,
+    "animal": 0.5,
     "backpack": 0.4,
-    "cell phone": 0.05,
+    "pen": 0.1,
+    "image": 0.05,
+    "phone": 0.05,
     "chair": 0.0,
     "bottle": 0.0,
-    "image": 0.0,
 }
 DEFAULT_RISK_WEIGHT = 0.1  # applied to any object class not explicitly listed
 
@@ -55,7 +57,7 @@ def score_event(event, live_count=1):
         }
     """
     zone = event.get("zone", "zone_1")
-    obj_class = event.get("object", "person")
+    obj_class = event.get("object", "human")
     raw_timestamp = event.get("timestamp")
 
     if isinstance(raw_timestamp, datetime.datetime):
@@ -101,10 +103,10 @@ def score_event(event, live_count=1):
         urgency = "low"
         reason_codes.append("low_risk_object_class")
 
-    # Rule 3.5: Person Security Priority Layer
-    # Person detections meeting the confidence threshold are elevated to High Urgency for security monitoring
+    # Rule 3.5: Human Security Priority Layer
+    # Real human detections meeting the confidence threshold are elevated to High Urgency for security monitoring
     confidence = float(event.get("confidence", 0.0))
-    if obj_class == "person" and (confidence >= 0.50 or confidence == 0.0):
+    if obj_class in ("human", "person") and (confidence >= 0.50 or confidence == 0.0):
         urgency = "high"
         if "within_normal_pattern" in reason_codes:
             reason_codes.remove("within_normal_pattern")
