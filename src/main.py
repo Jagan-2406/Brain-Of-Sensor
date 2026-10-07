@@ -157,8 +157,12 @@ def main():
 
                 # Track and persist urgency per event key across cooldown frames
                 high_urgency_classes = ("human", "vehicle")
+                medium_urgency_classes = ("animal",)
+                
                 if class_name in high_urgency_classes:
                     current_urgency = "high"
+                elif class_name in medium_urgency_classes:
+                    current_urgency = "medium"
                 elif event_key in last_urgency:
                     current_urgency = last_urgency[event_key]
                 else:
@@ -217,15 +221,15 @@ def main():
                     # Update cooldown
                     last_event_time[event_key] = current_time
                 
-                # Color code bounding box: High Urgency Security Classes (human, vehicle) = RED (0,0,255)
+                # Fixed Color Code: human/vehicle = RED (High), animal = YELLOW (Medium), others = GREEN (Low)
                 if class_name in high_urgency_classes or current_urgency == "high":
                     color = (0, 0, 255) # RED for High Urgency (human, vehicle)
                     urgency_label = "HIGH"
-                elif current_urgency == "medium":
-                    color = (0, 255, 255) # Yellow for MEDIUM priority objects
+                elif class_name in medium_urgency_classes or current_urgency == "medium":
+                    color = (0, 255, 255) # Yellow for Medium Urgency (animal)
                     urgency_label = "MEDIUM"
                 else:
-                    color = (0, 255, 0) # Green for LOW priority objects
+                    color = (0, 255, 0) # Green for Low Urgency (others: pen, cellphone, chair, image, etc.)
                     urgency_label = "LOW"
 
                 # Draw bounding box and label for visualization

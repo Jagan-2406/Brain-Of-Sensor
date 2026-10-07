@@ -41,23 +41,14 @@ MIN_BASELINE = 0.1
 
 def score_event(event, live_count=1):
     """
-    Computes a deterministic urgency score for a live event by comparing it
-    against the 30-day historical baseline for the specified zone and hour.
-
-    Parameters:
-        event (dict): Event dictionary with keys 'zone', 'object', 'timestamp'.
-        live_count (int): Number of detections in the current hour window.
-
-    Returns:
-        dict: {
-            "urgency": "low" | "medium" | "high",
-            "reason_codes": list of str,
-            "historical_average": float,
-            "live_count": int
-        }
+    Computes a fixed, auditable urgency score for a live event based strictly on object category:
+    - human & vehicle -> HIGH urgency
+    - animal -> MEDIUM urgency
+    - all other objects -> LOW urgency
+    (No variance over time or frequency).
     """
     zone = event.get("zone", "zone_1")
-    obj_class = event.get("object", "human")
+    obj_class = (event.get("object", "human") or "human").lower()
     raw_timestamp = event.get("timestamp")
 
     if isinstance(raw_timestamp, datetime.datetime):
@@ -72,55 +63,24 @@ def score_event(event, live_count=1):
 
     hour_of_day = event_dt.hour
 
-    # Fetch 30-day historical baseline for this zone & hour
+    # Fetch 30-day historical baseline for tracking & reports
     _, historical_avg = get_zone_history(zone, hour_of_day, lookback_days=30)
 
-    urgency = "low"
-    reason_codes = []
+    HIGH_CLASSES = ("human", "person", "vehicle", "car", "truck", "bus", "motorcycle", "bicycle")
+    MEDIUM_CLASSES = ("animal", "dog", "cat", "bird", "horse", "sheep", "cow", "bear", "elephant")
 
-    # Safe baseline floor to prevent divide-by-near-zero blowups
-    safe_average = max(historical_avg, MIN_BASELINE)
-
-    # Rule 1: Frequency Multipliers against historical average
-    if live_count >= (HIGH_MULTIPLIER * safe_average):
-        reason_codes.append("unusual_zone_frequency")
+    if obj_class in HIGH_CLASSES:
         urgency = "high"
-    elif live_count >= (MEDIUM_MULTIPLIER * safe_average):
-        reason_codes.append("unusual_zone_frequency")
-        urgency = "medium"
-
-    # Rule 2: Unusual Time Window (Nighttime check)
-    if hour_of_day in NIGHT_HOURS and historical_avg < NIGHT_BASELINE_THRESHOLD:
-        reason_codes.append("unusual_time")
-        if urgency == "low":
-            urgency = "medium"
-        elif urgency == "medium":
-            urgency = "high"
-
-    # Rule 3: Object Risk Weighting Layer
-    risk_weight = OBJECT_RISK_WEIGHT.get(obj_class, DEFAULT_RISK_WEIGHT)
-    if risk_weight <= 0.1:
-        urgency = "low"
-        reason_codes.append("low_risk_object_class")
-
-    # Rule 3.5: Human & Vehicle Security Priority Layer
-    # Real human & vehicle detections meeting the confidence threshold are elevated to High Urgency for security monitoring
-    confidence = float(event.get("confidence", 0.0))
-    if obj_class in ("human", "person", "vehicle", "car", "truck", "bus", "motorcycle") and (confidence >= 0.50 or confidence == 0.0):
-        urgency = "high"
-        if "within_normal_pattern" in reason_codes:
-            reason_codes.remove("within_normal_pattern")
-        if obj_class in ("vehicle", "car", "truck", "bus", "motorcycle"):
-            if "vehicle_security_alert" not in reason_codes:
-                reason_codes.append("vehicle_security_alert")
+        if obj_class in ("human", "person"):
+            reason_codes = ["person_security_alert"]
         else:
-            if "person_security_alert" not in reason_codes:
-                reason_codes.append("person_security_alert")
-
-    # Rule 4: Default normal pattern
-    if not reason_codes:
+            reason_codes = ["vehicle_security_alert"]
+    elif obj_class in MEDIUM_CLASSES:
+        urgency = "medium"
+        reason_codes = ["animal_detection_alert"]
+    else:
         urgency = "low"
-        reason_codes = ["within_normal_pattern"]
+        reason_codes = ["standard_object_detection"]
 
     return {
         "urgency": urgency,
