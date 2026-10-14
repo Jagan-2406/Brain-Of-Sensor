@@ -13,7 +13,6 @@ import liveness_check
 
 import torch
 
-# Normalized Project Class Label Mapping
 LABEL_MAP = {
     # Human mapping
     "person": "human",
@@ -81,11 +80,11 @@ def main():
     print(f"Loading YOLOv11 Model ({args.model}) on [{hud_device_label}]...")
     model = YOLO(args.model)
     
-    # OpenCV is 0-indexed, so we subtract 1 from the user's choice
+    # OpenCV is 0-indexed
     cv_cam_index = args.cam - 1
     cap = cv2.VideoCapture(cv_cam_index, cv2.CAP_DSHOW)
     
-    # Force standard resolution and minimum buffer size to eliminate webcam lag
+    
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -94,7 +93,6 @@ def main():
         print("Error: Could not open webcam.")
         return
 
-    # Dictionary to keep track of last event times for cooldown
     last_event_time = {}
     last_urgency = {}
     COOLDOWN_SECONDS = 3.0
@@ -113,7 +111,7 @@ def main():
             
         frame_height, frame_width = frame.shape[:2]
         
-        # Run YOLOv11 GPU accelerated inference with precision timing
+        # GPC Inference
         inference_start = time.time()
         results = model(frame, device=device_target, verbose=False)
         inference_time_ms = (time.time() - inference_start) * 1000.0
@@ -145,7 +143,7 @@ def main():
                 # Determine zone
                 zone = get_zone(x_center, frame_width)
 
-                # Post-processing liveness check for human detections
+                # Post-processing liveness check
                 if class_name in ("human", "person"):
                     class_name = liveness_check.classify_person_detection(zone, frame, (x1, y1, x2, y2))
                 
@@ -155,7 +153,7 @@ def main():
                 current_time = time.time()
                 event_key = (zone, class_name)
 
-                # Track and persist urgency per event key across cooldown frames
+                # Track and persist urgency per event
                 high_urgency_classes = ("human", "vehicle")
                 medium_urgency_classes = ("animal",)
                 
@@ -171,7 +169,7 @@ def main():
                 if event_key not in last_event_time or (current_time - last_event_time[event_key] >= COOLDOWN_SECONDS):
                     now_dt = datetime.datetime.now()
                     
-                    # Calculate live count so far in current hour for this zone
+                    # Calculate live count
                     session = SessionLocal()
                     try:
                         start_of_hour = now_dt.replace(minute=0, second=0, microsecond=0)
@@ -202,7 +200,7 @@ def main():
                     event_dict["reason_codes"] = score_res["reason_codes"]
                     event_dict["historical_avg"] = score_res["historical_average"]
                     
-                    # Build formal PriorityTag (Phase 4)
+                    # Build formal PriorityTag
                     priority_tag = build_priority_tag(event_dict, score_res)
                     priority_tag.urgency = score_res["urgency"]
                     event_dict["priority_tag_json"] = priority_tag.to_json()

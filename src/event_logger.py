@@ -5,7 +5,7 @@ from database import SessionLocal, Event, init_db
 
 LOG_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'events.csv'))
 
-# Ensure the database tables exist when this module loads
+
 init_db()
 
 def log_event(event_dict):
@@ -19,7 +19,7 @@ def log_event(event_dict):
         fieldnames = ['timestamp', 'zone', 'object', 'confidence', 'source']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
         
-        # Write header if file doesn't exist or is empty
+        
         if not file_exists or os.path.getsize(LOG_FILE) == 0:
             writer.writeheader()
             
@@ -28,7 +28,7 @@ def log_event(event_dict):
     # 2. Log to Database
     session = SessionLocal()
     try:
-        # Convert ISO format string back to datetime object for SQLite
+        
         dt_obj = datetime.datetime.fromisoformat(event_dict['timestamp'])
         reason_codes_val = event_dict.get('reason_codes')
         if isinstance(reason_codes_val, list):

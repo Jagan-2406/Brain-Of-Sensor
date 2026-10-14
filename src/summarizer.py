@@ -1,10 +1,3 @@
-"""
-LLM Summarizer Module
-
-Translates PriorityTag instances into plain-English event summaries.
-Uses LLM strictly as a translator (never as a decision-maker) with constrained prompts,
-output validation, and safe non-LLM fallback mechanisms.
-"""
 
 import os
 import json
@@ -106,10 +99,8 @@ def validate_summary(summary_text: str, priority_tag: PriorityTag) -> str:
     summary_lower = summary_text.lower()
     tag_urgency = priority_tag.urgency.lower()
 
-    # Check for direct contradictions (e.g. mentioning wrong urgency level)
     other_urgencies = {"low", "medium", "high"} - {tag_urgency}
     for wrong_urgency in other_urgencies:
-        # Check if wrong urgency word is used as a descriptor in summary
         if f"{wrong_urgency} urgency" in summary_lower or f"{wrong_urgency} priority" in summary_lower:
             print(f"[Validation Failed] Summary mentioned '{wrong_urgency}' while tag urgency is '{tag_urgency}'. Using fallback.")
             return fallback_summarize(priority_tag)

@@ -1,21 +1,10 @@
-"""
-Post-processing classifier run only on YOLO 'person' / 'human' detections.
-Does not alter the YOLO model or its other class outputs.
-
-Detects whether a 'human' detection is a real living person or a flat printed photo / phone screen image
-using two combined heuristics:
-1. Rectangular Frame Contour Detection (Canny edges + 4-sided polygon check for phone screen bezels / photo borders)
-2. Micro-Motion Variance Analysis (rolling buffer of cropped regions per zone)
-"""
 
 import cv2
 import numpy as np
 from typing import Dict, List, Tuple
 
-# Minimum pixel variance across consecutive frames to confirm natural human motion
 MIN_MOTION_VARIANCE = 4.0
 
-# Rolling buffer storing cropped region history per zone: { zone_name: [frame1_gray, frame2_gray, ...] }
 _ZONE_FRAME_BUFFERS: Dict[str, List[np.ndarray]] = {}
 MAX_BUFFER_SIZE = 5
 
@@ -31,7 +20,7 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = bbox
 
-    # Expand padding by 20% to capture any surrounding frame/bezel/border/card
+
     pad_x = int((x2 - x1) * 0.20)
     pad_y = int((y2 - y1) * 0.20)
 
@@ -47,7 +36,7 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
-    # Canny edge detection suited for phone screen bezels and paper borders
+    
     edges = cv2.Canny(blurred, 30, 120)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -55,11 +44,11 @@ def has_rectangular_frame(frame: np.ndarray, bbox: Tuple[int, int, int, int]) ->
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        # Check contours that cover >= 10% of cropped region (phone screens, paper photos)
+        
         if area > crop_area * 0.10:
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, 0.04 * peri, True)
-            # A 4-sided polygon represents a rectangular photo border or phone screen frame
+            
             if len(approx) == 4 and cv2.isContourConvex(approx):
                 return True
 
@@ -95,11 +84,11 @@ def has_natural_motion(zone: str, frame: np.ndarray, bbox: Tuple[int, int, int, 
     if len(buffer) > MAX_BUFFER_SIZE:
         buffer.pop(0)
 
-    # Need at least 3 frames buffered to evaluate motion
+    
     if len(buffer) < 3:
         return True
 
-    # Calculate mean absolute pixel differences across consecutive buffered frames
+
     diffs = []
     for i in range(1, len(buffer)):
         abs_diff = cv2.absdiff(buffer[i], buffer[i - 1])
@@ -118,11 +107,11 @@ def classify_person_detection(zone: str, frame: np.ndarray, bbox: Tuple[int, int
     """
     is_motion_present = has_natural_motion(zone, frame, bbox)
 
-    # 1. Real human in camera view has motion / micro-shifts -> ALWAYS 'human'
+    
     if is_motion_present:
         return "human"
 
-    # 2. Only if static (no human motion/breathing) AND rectangular photo border exists -> 'image'
+    
     is_frame_present = has_rectangular_frame(frame, bbox)
     if is_frame_present:
         return "image"

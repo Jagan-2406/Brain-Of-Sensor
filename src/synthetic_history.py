@@ -6,7 +6,7 @@ def generate_synthetic_events(days=30):
     """Generates synthetic historical events for zone_1 and zone_2."""
     session = SessionLocal()
     
-    # Check if we already have synthetic data to avoid duplication
+    #avoid duplication
     existing = session.query(Event).filter(Event.source == 'synthetic').first()
     if existing:
         print("Synthetic data already exists. Skipping generation.")

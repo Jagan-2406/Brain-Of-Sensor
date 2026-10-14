@@ -12,14 +12,14 @@ class Event(Base):
     zone = Column(String, nullable=False)
     object = Column(String, nullable=False)
     confidence = Column(Float, nullable=False)
-    source = Column(String, nullable=False) # 'real' or 'synthetic'
-    urgency = Column(String, nullable=True) # 'low', 'medium', 'high'
-    reason_codes = Column(String, nullable=True) # JSON or comma-separated string
+    source = Column(String, nullable=False) 
+    urgency = Column(String, nullable=True)
+    reason_codes = Column(String, nullable=True)
     historical_avg = Column(Float, nullable=True)
-    priority_tag_json = Column(String, nullable=True) # Serialized PriorityTag JSON
-    summary_text = Column(String, nullable=True) # Plain-English event summary sentence
+    priority_tag_json = Column(String, nullable=True)
+    summary_text = Column(String, nullable=True)
 
-# Set up SQLite engine
+#SQLite
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'bos.db'))
 engine = create_engine(f'sqlite:///{db_path}', echo=False)
 SessionLocal = sessionmaker(bind=engine)
@@ -29,7 +29,7 @@ def init_db():
     Base.metadata.create_all(engine)
     
     with engine.connect() as conn:
-        # Check if priority_tag_json column exists, add if missing
+        
         try:
             conn.execute(text("SELECT priority_tag_json FROM events LIMIT 1"))
         except Exception:
@@ -40,7 +40,7 @@ def init_db():
             except Exception:
                 pass
                 
-        # Check if summary_text column exists, add if missing
+        
         try:
             conn.execute(text("SELECT summary_text FROM events LIMIT 1"))
         except Exception:
@@ -58,17 +58,17 @@ def get_zone_history(zone, hour_of_day, lookback_days=30):
     """
     session = SessionLocal()
     try:
-        # Calculate the cutoff date
+        
         cutoff_date = datetime.datetime.now() - datetime.timedelta(days=lookback_days)
         
-        # Query for events in the specified zone, after the cutoff date, and matching the hour
+        
         count = session.query(Event).filter(
             Event.zone == zone,
             Event.timestamp >= cutoff_date,
             extract('hour', Event.timestamp) == hour_of_day
         ).count()
+    
         
-        # Calculate the average per day for this specific hour
         average_per_hour_occurrence = count / lookback_days if lookback_days > 0 else 0
         return count, average_per_hour_occurrence
     finally:

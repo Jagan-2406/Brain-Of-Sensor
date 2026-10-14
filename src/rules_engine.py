@@ -1,25 +1,15 @@
 import datetime
 from database import get_zone_history
 
-# --- Rule Threshold Constants ---
-# Flags a burst of activity 3.0x or higher above the historical average for this zone/hour
+# Rule set
 HIGH_MULTIPLIER = 3.0
 
-# Flags activity 1.5x above normal for this zone/hour
+# Flags activity 1.5x
 MEDIUM_MULTIPLIER = 1.5
-
-# Low-traffic nighttime window: 9 PM (21:00) to 7 AM (07:00)
 NIGHT_HOURS = set(list(range(21, 24)) + list(range(0, 7)))
-
-# Baseline threshold (events/day) below which a nighttime hour is considered quiet
 NIGHT_BASELINE_THRESHOLD = 0.5
 
-# --- Object Risk Weight Table & Baseline Floor ---
-# Assigns a relative risk weight per detected object class.
-# This corrects for statistical rarity being mistaken for actual risk —
-# e.g. a rarely-seen harmless object (like a phone) should not outscore
-# a commonly-seen but security-relevant object (like a person).
-# Values can be tuned later without changing the core scoring logic.
+#Object Risk Weight
 OBJECT_RISK_WEIGHT = {
     "person": 1.0,
     "vehicle": 1.0,
@@ -32,10 +22,7 @@ OBJECT_RISK_WEIGHT = {
     "chair": 0.0,
     "bottle": 0.0,
 }
-DEFAULT_RISK_WEIGHT = 0.1  # applied to any object class not explicitly listed
-
-# Prevents runaway multipliers when an object's historical average is
-# near zero (e.g. an object rarely or never seen before in this zone).
+DEFAULT_RISK_WEIGHT = 0.1  
 MIN_BASELINE = 0.1
 
 

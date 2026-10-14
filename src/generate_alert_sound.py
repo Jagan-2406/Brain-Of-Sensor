@@ -1,6 +1,4 @@
-"""
-Generates crisp, valid notification audio files (static/sounds/alert.wav and static/sounds/alert.mp3).
-"""
+
 
 import os
 import wave
@@ -15,10 +13,9 @@ def generate_alert_sound():
     mp3_path = os.path.join(sound_dir, 'alert.mp3')
 
     sample_rate = 44100
-    duration = 0.5  # 500ms chime
+    duration = 0.5  
     total_samples = int(sample_rate * duration)
 
-    # 880Hz (A5) and 1318.51Hz (E6) dual-tone high priority chime
     freq1 = 880.0
     freq2 = 1318.51
 

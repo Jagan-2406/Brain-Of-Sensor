@@ -1,7 +1,6 @@
 """
-BoS Dashboard Backend Server (Flask)
+BoS website
 
-Provides routes for multi-page command UI and read-only JSON & PDF API endpoints.
 """
 
 import os
@@ -10,7 +9,7 @@ import datetime
 import json
 from flask import Flask, render_template, jsonify, request, Response
 
-# Add current directory to path so database & report_generator imports work cleanly
+# Add directory to path 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import SessionLocal, Event, init_db
@@ -22,11 +21,11 @@ app = Flask(
     static_folder=os.path.join(os.path.dirname(__file__), '..', 'static')
 )
 
-# Ensure database tables exist
+#database
 init_db()
 
 
-# --- HTML Page Views ---
+#HTML
 
 @app.route('/')
 def index():
@@ -46,7 +45,7 @@ def analytics_page():
     return render_template('analytics.html')
 
 
-# --- JSON API Endpoints ---
+#API Endpoints
 
 @app.route('/api/events', methods=['GET'])
 def get_events():
@@ -121,7 +120,7 @@ def get_analytics_summary():
         }
         object_counts = {}
 
-        # 7-day daily trend dict
+        # 7-day
         daily_trend = {}
         for d in range(6, -1, -1):
             day_str = (datetime.datetime.now() - datetime.timedelta(days=d)).strftime('%b %d')
@@ -173,7 +172,7 @@ def get_analytics_summary():
         session.close()
 
 
-# --- Feature 2: PDF Report Download Endpoint ---
+#PDF Report
 
 @app.route('/api/report/weekly', methods=['GET'])
 def download_weekly_report():
@@ -190,7 +189,7 @@ def download_weekly_report():
         return jsonify({"error": f"PDF Generation Error: {str(e)}"}), 500
 
 
-# --- Helper Functions ---
+#Helper Functions
 
 def _format_event_dict(ev: Event) -> dict:
     reason_codes_list = []
