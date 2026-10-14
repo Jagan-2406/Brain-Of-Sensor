@@ -9,9 +9,7 @@ import os
 import sys
 import datetime
 from fpdf import FPDF
-from io import BytesIO
 
-# Ensure database works
 sys.path.insert(0, os.path.dirname(__file__))
 from database import SessionLocal, Event
 

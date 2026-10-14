@@ -8,7 +8,7 @@ from event_logger import log_event
 from rules_engine import score_event
 from priority_tag import build_priority_tag
 from summarizer import summarize_event, validate_summary
-from database import SessionLocal, Event, extract
+from database import SessionLocal, Event
 import liveness_check
 
 import torch
@@ -97,8 +97,6 @@ def main():
     last_urgency = {}
     COOLDOWN_SECONDS = 3.0
     CONFIDENCE_THRESHOLD = args.conf
-    
-    prev_frame_time = time.time()
     
     print(f"Starting YOLOv11 webcam feed on {hud_device_label}. Press 'q' to quit.")
     

@@ -1,7 +1,4 @@
-
 import os
-import json
-from typing import Optional
 from dotenv import load_dotenv
 from priority_tag import PriorityTag
 

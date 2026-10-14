@@ -1,29 +1,6 @@
 import datetime
 from database import get_zone_history
 
-# Rule set
-HIGH_MULTIPLIER = 3.0
-
-# Flags activity 1.5x
-MEDIUM_MULTIPLIER = 1.5
-NIGHT_HOURS = set(list(range(21, 24)) + list(range(0, 7)))
-NIGHT_BASELINE_THRESHOLD = 0.5
-
-#Object Risk Weight
-OBJECT_RISK_WEIGHT = {
-    "person": 1.0,
-    "vehicle": 1.0,
-    "car": 1.0,
-    "animal": 0.5,
-    "backpack": 0.4,
-    "pen": 0.1,
-    "image": 0.05,
-    "phone": 0.05,
-    "chair": 0.0,
-    "bottle": 0.0,
-}
-DEFAULT_RISK_WEIGHT = 0.1  
-MIN_BASELINE = 0.1
 
 
 def score_event(event, live_count=1):
@@ -67,7 +44,7 @@ def score_event(event, live_count=1):
         reason_codes = ["animal_detection_alert"]
     else:
         urgency = "low"
-        reason_codes = ["standard_object_detection"]
+        reason_codes = ["standard_object_detection", "low_risk_object_class"]
 
     return {
         "urgency": urgency,
