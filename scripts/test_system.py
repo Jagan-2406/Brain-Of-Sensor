@@ -1,13 +1,5 @@
 """
 BoS (Brain of Sensors) — Master System Verification Suite
-
-Consolidated test suite covering:
-1. Phase 1: Zone Coordinate Mapping (zones.py) & Liveness Check (liveness_check.py)
-2. Phase 2: Database Schema & 30-Day Synthetic Baseline (database.py, synthetic_history.py)
-3. Phase 3: Rules Engine Urgency & Object Risk Weighting (rules_engine.py)
-4. Phase 4: PriorityTag JSON Schema & Validation (priority_tag.py)
-5. Phase 5: LLM Summarizer & Output Validation Rules (summarizer.py)
-6. Phase 6 & Feature Upgrades: Multi-Page UI, Analytics, History Filters, PDF Report (app.py, report_generator.py)
 """
 
 import sys

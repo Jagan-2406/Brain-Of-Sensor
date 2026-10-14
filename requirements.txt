@@ -2,7 +2,6 @@ ultralytics
 opencv-python
 pandas
 sqlalchemy
-anthropic
 python-dotenv
 flask
 fpdf2
